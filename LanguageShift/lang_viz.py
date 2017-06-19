@@ -1,11 +1,58 @@
+import pickle
+import random
+
+import numpy as np
+import pandas as pd
 from mesa import Agent, Model
 from mesa.datacollection import DataCollector
 from mesa.time import SimultaneousActivation
-import numpy as np
-import pandas as pd
-import random
-from AdjacencyGrid import AdjacencyGrid
-import pickle
+from scipy.spatial import distance
+
+
+class NeighborList(object):
+    """ Grid where adjacency is stored, rather calculated. Used for fast neighbor lookups.
+
+
+    Performance:
+        Let n be number of Agents
+
+        Obtain agent by ID:
+            O(n) (worst case)
+        Obtain neighborhood of agent:
+            O(n) (worst case)
+        Calculate neighborhood (performed once at beginning):
+            O((n**2)log_2(n)) (worst case)
+            O(n**2 + n) (average case for small neighborhoods)
+
+
+    Methods:
+        get_neighbors: Returns the objects surrounding a given cell.
+    """
+
+    def __init__(self, distance_fn, neighborhood_size):
+        self.agent_list = []
+        self.agent_neighbors = {}
+        self.get_distance = distance_fn
+        self.neighborhood_size = neighborhood_size
+
+    def calc_neighbors(self):
+        sorted(self.agent_list, key=lambda a: a.unique_id)
+        print('Generating adjacency table:')
+        neighbors = []
+        for a in self.agent_list:
+            print('Agent #' + str(a.unique_id))
+            for b in self.agent_list:
+                neighbors.append(b)
+            self.agent_neighbors[a] = sorted(neighbors, key=lambda b: self.get_distance(a, b))
+
+    def add_agent(self, pos, agent):
+        x, y = pos
+        agent.pos = pos
+        self.agent_list.append(agent)
+
+    def get_neighbors_by_agent(self, agent):
+        return self.agent_neighbors[agent]
+
 
 class LanguageAgent(Agent):
     def __init__(self, model, unique_id, initial_population, initial_prob_v):
@@ -34,12 +81,14 @@ class LanguageAgent(Agent):
         self.probability, self.next_probability = self.next_probability, self.probability
 
 
+def get_distance(a, b):
+    return distance.euclidean(a.pos, b.pos)
+
 class LanguageModel(Model):
     def __init__(self, diffusivity, filename):
         super()
         self.num_agents = 0
-        #self.grid = ContinuousSpace(1000, 1000, torus=False)
-        self.grid = AdjacencyGrid()
+        self.grid = NeighborList(distance_fn=get_distance, neighborhood_size=8)
         self.schedule = SimultaneousActivation(self)
         self.diffusion = np.array(diffusivity)
         self.pop_data = self.read_file(filename)
@@ -54,7 +103,8 @@ class LanguageModel(Model):
                 # add the agent at position (x,y)
                 #print('lat: ' + str(self.pop_data.loc[idx]['latitude']))
                 #print('long ' + str(self.pop_data.loc[idx]['longitude']))
-                self.grid.place_agent(a, (float(self.pop_data.loc[a.unique_id - 1]['latitude']), float(self.pop_data.loc[a.unique_id - 1]['longitude'])))
+                self.grid.add_agent((float(self.pop_data.loc[a.unique_id - 1]['latitude']),
+                                     float(self.pop_data.loc[a.unique_id - 1]['longitude'])), a)
                 #print('added')
 
         self.grid.calc_neighbors()
