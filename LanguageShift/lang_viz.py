@@ -1,3 +1,5 @@
+import heapq
+import itertools
 import pickle
 import random
 
@@ -7,6 +9,45 @@ from mesa import Agent, Model
 from mesa.datacollection import DataCollector
 from mesa.time import SimultaneousActivation
 from scipy.spatial import distance
+
+
+class heap(object):
+    def __init__(self):
+        self.pq = []  # list of entries arranged in a heap
+        self.entry_finder = {}  # mapping of tasks to entries
+        self.REMOVED = '<removed-task>'  # placeholder for a removed task
+        self.counter = itertools.count()  # unique sequence count
+
+    def add_task(self, task, priority=0):
+        'Add a new task or update the priority of an existing task'
+        if task in self.entry_finder:
+            self.remove_task(task)
+        count = next(self.counter)
+        entry = [priority, count, task]
+        self.entry_finder[task] = entry
+        heapq.heappush(self.pq, entry)
+
+    def heapify(self):
+        heapq.heapify(self.pq)
+
+    def remove_task(self, task):
+        'Mark an existing task as REMOVED.  Raise KeyError if not found.'
+        entry = self.entry_finder.pop(task)
+        entry[-1] = self.REMOVED
+
+    def pop_task(self):
+        'Remove and return the highest priority task. Raise KeyError if empty.'
+        while self.pq:
+            priority, count, task = heapq.heappop(self.pq)
+            if task is not self.REMOVED:
+                del self.entry_finder[task]
+                return task
+        raise KeyError('pop from an empty priority queue')
+
+    def get_smallest(self, n):
+        self.heapify()
+        return heapq.nsmallest(n, self.pq)[:]
+
 
 
 class NeighborList(object):
@@ -29,29 +70,53 @@ class NeighborList(object):
         get_neighbors: Returns the objects surrounding a given cell.
     """
 
-    def __init__(self, distance_fn, neighborhood_size):
-        self.agent_list = []
-        self.agent_neighbors = {}
+    def __init__(self, distance_fn, neighborhood_size, loadpickle=None):
+        self.agent_list = {}
+        if pickle is not None:
+            self.agent_neighbors = pickle.load(open(loadpickle, 'rb'))
+        else:
+            self.agent_neighbors = {}
         self.get_distance = distance_fn
         self.neighborhood_size = neighborhood_size
 
     def calc_neighbors(self):
-        sorted(self.agent_list, key=lambda a: a.unique_id)
+        '''
+        After adding all agents to the model, calculate the neighbors
+
+
+        '''
+
         print('Generating adjacency table:')
-        neighbors = []
-        for a in self.agent_list:
+        # Store other agents in a priority queue by distance (lesser distance == higher priority)
+
+        for a_id, a in self.agent_list.items():
+            neighbors_pq = heap()
             print('Agent #' + str(a.unique_id))
-            for b in self.agent_list:
-                neighbors.append(b)
-            self.agent_neighbors[a] = sorted(neighbors, key=lambda b: self.get_distance(a, b))
+            for b_id, b in self.agent_list.items():
+                # print('\tadded: #' + str(b.unique_id))
+                neighbors_pq.add_task(b_id, priority=self.get_distance(a, b))
+            neighbors_pq.heapify()
+            neighbors = [i[2] for i in neighbors_pq.get_smallest(self.neighborhood_size + 1)]
+            # print('\t\tadding ' + str(neighbors))
+            self.agent_neighbors.update({a_id: neighbors})
+            del neighbors_pq, neighbors
+            #self.agent_neighbors[a] = sorted(neighbors, key=lambda b: self.get_distance(a, b))
 
     def add_agent(self, pos, agent):
         x, y = pos
         agent.pos = pos
-        self.agent_list.append(agent)
+        self.agent_list[agent.unique_id] = agent
 
-    def get_neighbors_by_agent(self, agent):
-        return self.agent_neighbors[agent]
+    def get_agent(self, a):
+        return self.agent_list[a.unique_id]
+
+    def get_neighbors_by_agent(self, agent, include_self=False):
+        if include_self:
+            return [self.agent_list[a_id] for a_id in self.agent_neighbors[agent.unique_id]]
+
+        ret_val = [self.agent_list[a_id] for a_id in self.agent_neighbors[agent.unique_id]][1:]
+        # print(ret_val, type(ret_val))
+        return ret_val
 
 
 class LanguageAgent(Agent):
@@ -68,7 +133,7 @@ class LanguageAgent(Agent):
             other(LanguageAgent): an adjacent or otherwise relevant other LanguageAgent
         '''
         return ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
-            -np.square(self.model.grid.get_distance(self.pos, other.pos))) / (4 * self.diffusion)
+            -np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion)
 
     def step(self):
         f = np.zeros(len(self.probability))
@@ -88,7 +153,7 @@ class LanguageModel(Model):
     def __init__(self, diffusivity, filename):
         super()
         self.num_agents = 0
-        self.grid = NeighborList(distance_fn=get_distance, neighborhood_size=8)
+        self.grid = NeighborList(distance_fn=get_distance, neighborhood_size=8, loadpickle='neighbor.pkl')
         self.schedule = SimultaneousActivation(self)
         self.diffusion = np.array(diffusivity)
         self.pop_data = self.read_file(filename)
@@ -107,11 +172,11 @@ class LanguageModel(Model):
                                      float(self.pop_data.loc[a.unique_id - 1]['longitude'])), a)
                 #print('added')
 
-        self.grid.calc_neighbors()
+        #self.grid.calc_neighbors()
 
         self.datacollector = DataCollector(
             model_reporters={},
-            agent_reporters={"diff": lambda x: x.next_probability - x.probability})
+            agent_reporters={"pop": lambda x: x.probability[0] * x.population})
 
     def read_file(self, filename):
         data = pd.read_csv(filename)
@@ -130,5 +195,5 @@ class LanguageModel(Model):
 
 
 m = LanguageModel([.05, .05], 'speakers.csv')
-pickle.dump(m, file=open( "languagemodel.p", "wb" ))
-
+m.run(30)
+print(m.datacollector.get_agent_vars_dataframe())
