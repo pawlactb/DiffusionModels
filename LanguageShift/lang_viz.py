@@ -1,7 +1,6 @@
 import heapq
 import itertools
 import pickle
-import random
 
 import numpy as np
 import pandas as pd
@@ -9,7 +8,7 @@ from mesa import Agent, Model
 from mesa.datacollection import DataCollector
 from mesa.time import SimultaneousActivation
 from scipy.spatial import distance
-
+from scipy import interpolate
 
 class heap(object):
     def __init__(self):
@@ -125,12 +124,19 @@ class NeighborList(object):
 
 
 class LanguageAgent(Agent):
-    def __init__(self, model, unique_id, initial_population, initial_prob_v):
+    def __init__(self, model, unique_id, population_v, initial_prob_v):
         super().__init__(unique_id, model)
-        self.population = initial_population
+        print('pop_v: ' + str(population_v))
+        self.population_v = np.arange(0, 30, 1)
+        self.get_population = interpolate.interp1d([0, 10, 20, 30], population_v, kind='linear')
+        print('inter_p: ' + str(self.get_population(self.population_v)))
         self.probability = np.array(initial_prob_v)
         self.next_probability = np.array(self.probability, copy=True)
         self.diffusion = self.model.diffusion
+        self.population = self.get_population(0)
+
+    def get_population(self):
+        self.population = self.model.agent_pop[self.unique_id][self.model.schedule.time]
 
     def calculate_contribution(self, other):
         '''
@@ -142,6 +148,7 @@ class LanguageAgent(Agent):
 
     def step(self):
         f = np.zeros(len(self.probability))
+        self.population = self.get_population()
         for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:8]:
             f += self.calculate_contribution(neighbor)
 
@@ -163,29 +170,32 @@ class LanguageModel(Model):
         self.diffusion = np.array(diffusivity)
         self.pop_data = self.read_file(filename)
 
-        for loc in self.pop_data.loc[:]['location_id']:
-                #print('id: ' + str(idx))
-                self.num_agents += 1
-                # Create agents, add them to scheduler
-                a = LanguageAgent(self, loc, 1000 + 500 * random.random(), [random.random(), random.random()])
-                self.schedule.add(a)
+        #for loc in self.pop_data.loc[:]['location_id']:
+        for row in self.pop_data.itertuples(index=True):
+            print('id: ' + str(row))
+            self.num_agents += 1
+            # Create agents, add them to scheduler
+            a = LanguageAgent(self, int(row[0]), [int(row[11]), int(row[12]), int(row[13]), int(row[14])], [float(row[15]/float(row[11])), 1-float(row[15]/float(row[11]))])
+            self.schedule.add(a)
 
-                # add the agent at position (x,y)
-                #print('lat: ' + str(self.pop_data.loc[idx]['latitude']))
-                #print('long ' + str(self.pop_data.loc[idx]['longitude']))
-                self.grid.add_agent((float(self.pop_data.loc[a.unique_id - 1]['latitude']),
+            # add the agent at position (x,y)
+            #print('lat: ' + str(self.pop_data.loc[idx]['latitude']))
+            #print('long ' + str(self.pop_data.loc[idx]['longitude']))
+            self.grid.add_agent((float(self.pop_data.loc[a.unique_id - 1]['latitude']),
                                      float(self.pop_data.loc[a.unique_id - 1]['longitude'])), a)
                 #print('added')
+
 
         #self.grid.calc_neighbors()
 
         self.datacollector = DataCollector(
             model_reporters={},
-            agent_reporters={"pop": lambda x: x.probability[0] * x.population})
+            agent_reporters={"pop": lambda x:  x.population*x.probability[0]})
 
     def read_file(self, filename):
         data = pd.read_csv(filename)
-        return data.dropna()
+        print(data)
+        return data
 
 
     def step(self):
@@ -196,9 +206,9 @@ class LanguageModel(Model):
     def run(self, timesteps):
         for t in range(timesteps):
             self.step()
-            print('Model Step: ' + str(t+1))
+            print('Model Step: ' + str(self.schedule.time))
 
 
-m = LanguageModel([.05, .05], 'speakers.csv')
+m = LanguageModel([.005, .005], 'doctoreddata.csv')
 m.run(30)
-print(m.datacollector.get_agent_vars_dataframe())
+print(m.datacollector.get_agent_vars_dataframe().tail())
