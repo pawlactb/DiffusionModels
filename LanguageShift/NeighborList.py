@@ -80,7 +80,7 @@ class NeighborList(object):
 
         # Store other agents in a priority queue by distance (lesser distance == higher priority)
         # We pop a tuple of type (int, agent). The first element is the agent id.
-
+        print('Calculating Neighbors')
         # iterate over all agents
         for a_id, a in self.agent_list.items():
             # create a priority queue
@@ -95,22 +95,17 @@ class NeighborList(object):
             neighbors_pq.heapify()
             neighbors = [i[2] for i in neighbors_pq.get_smallest(self.neighborhood_size + 1)]
             # print('\t\tadding ' + str(neighbors))
-            self.agent_neighbors.update({a_id: neighbors})
+            self.agent_neighbors.update({int(a_id): neighbors})
             del neighbors_pq, neighbors
-            #self.agent_neighbors[a] = sorted(neighbors, key=lambda b: self.get_distance(a, b))
 
     def add_agent(self, pos, agent):
         x, y = pos
         agent.pos = pos
-        self.agent_list[agent.unique_id] = agent
+        self.agent_list.update({agent.unique_id: agent})
 
-    def get_agent(self, a):
-        return self.agent_list[a.unique_id]
+    def get_agent(self, id):
+        return self.agent_list[id]
 
     def get_neighbors_by_agent(self, agent, include_self=False):
-        if include_self:
-            return [self.agent_list[a_id] for a_id in self.agent_neighbors[agent.unique_id]]
-
-        ret_val = [self.agent_list[a_id] for a_id in self.agent_neighbors[agent.unique_id]][1:]
-        # print(ret_val, type(ret_val))
-        return ret_val
+        # print(self.agent_neighbors.keys())
+        return [self.get_agent(a_id) for a_id in self.agent_neighbors[agent.unique_id]]
