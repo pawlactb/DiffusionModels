@@ -1,9 +1,10 @@
+from math import radians, cos, sin, asin, sqrt
+
 import numpy as np
 import pandas as pd
 from mesa import Agent, Model
 from mesa.datacollection import DataCollector
 from mesa.time import SimultaneousActivation
-from scipy.spatial import distance
 
 from LanguageShift.NeighborList import NeighborList
 
@@ -50,7 +51,7 @@ class LanguageAgent(Agent):
         Returns: None
 
         '''
-        print(self.population, self.probability)
+        # print(self.population, self.probability)
         f = np.zeros(len(self.probability))
         self.get_population()
         for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:8]:
@@ -67,6 +68,23 @@ class LanguageAgent(Agent):
         self.probability, self.next_probability = self.next_probability, self.probability
 
 
+# from https://stackoverflow.com/a/4913653/
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    r = 6371  # Radius of earth in kilometers. Use 3956 for miles
+    return c * r
+
 def get_distance(a, b):
     '''
     The get_distance function provides the notion of distance for our interactions.
@@ -78,13 +96,14 @@ def get_distance(a, b):
     Returns: (float) distance between two points in space.
 
     '''
-    return distance.euclidean(a.pos, b.pos)
+    return haversine(a.pos[0], a.pos[1], b.pos[0], b.pos[1])
 
 
 class LanguageModel(Model):
     def __init__(self, diffusivity, filename, grid_pickle=None):
         '''
-        LanguageModels contain LanguageAgents, among
+        LanguageModels contain LanguageAgents and other objects to run the model.
+
         Args:
             diffusivity:
             filename:
@@ -103,7 +122,7 @@ class LanguageModel(Model):
             # print('row: ' + str(row))
 
             # read in population data
-            self.agent_pop.update({int(row[1]): [int(x) for x in row[5:]]})
+            self.agent_pop.update({int(row[1]): [int(x) for x in row[6:]]})
             # print(self.agent_pop[row[1]])
 
             self.num_agents += 1
@@ -129,10 +148,15 @@ class LanguageModel(Model):
 
         self.datacollector = DataCollector(
             model_reporters={},
-            agent_reporters={"pop": lambda x: x.population * x.probability[0]})
+            agent_reporters={"pop": lambda x: x.population})
+
+        for key in self.agent_pop.keys():
+            print(key)
+            for x in self.agent_pop[key]:
+                print('\t', x)
 
     def get_population(self, id, year):
-        return self.agent_pop[id][year]
+        return self.agent_pop[id][year + 1]
 
     def read_file(self, filename):
         data = pd.read_csv(filename).dropna()
