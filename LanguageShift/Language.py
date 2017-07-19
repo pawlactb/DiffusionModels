@@ -148,7 +148,10 @@ class LanguageModel(Model):
 
         self.datacollector = DataCollector(
             model_reporters={},
-            agent_reporters={"pop": lambda x: x.population})
+            agent_reporters={"pop": lambda x: x.population,
+                             "p_german": lambda x: x.population * x.probability[0],
+                             "lat": lambda x: x.pos[0],
+                             "long": lambda x: x.pos[1]})
 
         for key in self.agent_pop.keys():
             print(key)
