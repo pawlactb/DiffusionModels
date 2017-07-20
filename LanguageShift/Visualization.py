@@ -1,12 +1,21 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-
 from mpl_toolkits.basemap import Basemap
 
 
 class Visualization(object):
     def __init__(self, shapefile, dataFrame=None, csv=None):
-        self.shapefile = shapefile
+        self.shapefiles = shapefile
+
+        # plot map with albert's equal area projection
+        self.draw_map(res='f',
+                      proj='aea',
+                      lat=46.64, lon=14.26,
+                      lllong=12.5, lllat=46, urlong=15.1, urlat=47.15)
+
+        for sf in self.shapefiles:
+            self.add_shapefile(sf[0], sf[1])
 
         if dataFrame is None:
             self.data = pd.read_csv(csv)
@@ -16,31 +25,34 @@ class Visualization(object):
         if self.data is None:
             raise ValueError('Must pass data to visualization.')
 
+
         self.figure_count = 0
+
+    def add_shapefile(self, file, key):
+        self.bmap.readshapefile(file, name=key)
 
     def draw_map(self, res,
                  proj,
                  lat, lon,
                  lllong, lllat, urlong, urlat):
-        bmap = Basemap(resolution=res,
-                       projection=proj,
-                       lat_0=lat, lon_0=lon,
-                       llcrnrlon=lllong, llcrnrlat=lllat, urcrnrlon=urlong, urcrnrlat=urlat)
+        self.bmap = Basemap(resolution=res,
+                            projection=proj,
+                            lat_0=lat, lon_0=lon,
+                            llcrnrlon=lllong, llcrnrlat=lllat, urcrnrlon=urlong, urcrnrlat=urlat)
 
-        bmap.drawmapboundary(fill_color='#46bcec')
-        bmap.fillcontinents(color='#f2f2f2', lake_color='#46bcec')
-        bmap.readshapefile(self.shapefile, 'austria')
+        self.bmap.drawmapboundary(fill_color='#46bcec')
+        self.bmap.fillcontinents(color='#f2f2f2', lake_color='#46bcec')
+
+    def show(self):
+        plt.show()
 
     def new_figure(self, title='Figure'):
         # increment the figure count
         self.figure_count += 1
 
         plt.figure(self.figure_count)
+        plt.title(title)
 
-        # plot map with albert's equal area projection
-        self.draw_map(res='l',
-                      proj='aea',
-                      lat=46.64, lon=14.26,
-                      lllong=12.5, lllat=46, urlong=15.1, urlat=47.15)
-
-        plt.show()
+    def plot_timestep(self, timestep):
+        x, y = self.bmap(np.array(self.data[:]['long']), np.array(self.data[:]['lat']))
+        self.bmap.plot(x, y, 'bo', markersize=1)
