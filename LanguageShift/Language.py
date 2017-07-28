@@ -41,8 +41,10 @@ class LanguageAgent(Agent):
         Returns: None
 
         '''
-        return ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
+        ret_val = ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
             -np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion)
+        return ret_val
+        # return ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(-np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion)
 
     def step(self):
         '''
@@ -51,10 +53,9 @@ class LanguageAgent(Agent):
         Returns: None
 
         '''
-        # print(self.population, self.probability)
         f = np.zeros(len(self.probability))
         self.get_population()
-        for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:8]:
+        for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:6]:
             f += self.calculate_contribution(neighbor)
 
         self.next_probability = ((self.population * self.probability) + f) / (np.sum(f) + self.population)
@@ -84,6 +85,7 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * asin(sqrt(a))
     r = 6371  # Radius of earth in kilometers. Use 3956 for miles
     return c * r
+
 
 def get_distance(a, b):
     '''
@@ -130,8 +132,7 @@ class LanguageModel(Model):
             if float(row[11]) == 0:
                 a = LanguageAgent(self, int(row[1]), [0, 1])
             else:
-                a = LanguageAgent(self, int(row[1]),
-                                  [float(row[15]) / float(row[11]), 1 - (float(row[15]) / float(row[11]))])
+                a = LanguageAgent(self, int(row[1]), [float(row[5]), 1 - (float(row[5]))])
 
             self.schedule.add(a)
 
@@ -149,17 +150,14 @@ class LanguageModel(Model):
         self.datacollector = DataCollector(
             model_reporters={},
             agent_reporters={"pop": lambda x: x.population,
-                             "p_german": lambda x: x.population * x.probability[0],
+                             "p_slovene": lambda x: x.probability[0],
+                             "p_german": lambda x: x.probability[1],
                              "lat": lambda x: x.pos[0],
-                             "long": lambda x: x.pos[1]})
-
-        for key in self.agent_pop.keys():
-            print(key)
-            for x in self.agent_pop[key]:
-                print('\t', x)
+                             "long": lambda x: x.pos[1],
+                             "prob": lambda x: x.probability[0] + x.probability[1]})
 
     def get_population(self, id, year):
-        return self.agent_pop[id][year + 1]
+        return self.agent_pop[id][year]
 
     def read_file(self, filename):
         data = pd.read_csv(filename).dropna()

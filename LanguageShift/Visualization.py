@@ -1,3 +1,4 @@
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ class Visualization(object):
         self.shapefiles = shapefile
 
         # plot map with albert's equal area projection
-        self.draw_map(res='f',
+        self.draw_map(res='c',
                       proj='aea',
                       lat=46.64, lon=14.26,
                       lllong=12.5, lllat=46, urlong=15.1, urlat=47.15)
@@ -24,7 +25,6 @@ class Visualization(object):
 
         if self.data is None:
             raise ValueError('Must pass data to visualization.')
-
 
         self.figure_count = 0
 
@@ -44,6 +44,7 @@ class Visualization(object):
         self.bmap.fillcontinents(color='#f2f2f2', lake_color='#46bcec')
 
     def show(self):
+        plt.colorbar()
         plt.show()
 
     def new_figure(self, title='Figure'):
@@ -54,5 +55,15 @@ class Visualization(object):
         plt.title(title)
 
     def plot_timestep(self, timestep):
-        x, y = self.bmap(np.array(self.data[:]['long']), np.array(self.data[:]['lat']))
-        self.bmap.plot(x, y, 'bo', markersize=1)
+        longs = np.array(self.data.loc[self.data['Step'] == timestep]['long'])
+        lats = np.array(self.data.loc[self.data['Step'] == timestep]['lat'])
+
+        german = self.data.loc[self.data['Step'] == timestep]['p_german']
+        slovene = self.data.loc[self.data['Step'] == timestep]['p_slovene']
+        cmap = cm.ScalarMappable(cmap='coolwarm')
+        col = cmap.to_rgba(german.tolist(), norm=None)
+
+        # x, y = self.bmap(longs, lats, c=col)
+        self.bmap.scatter(longs, lats, latlon=True, marker='s', s=1, c=german, cmap='coolwarm', zorder=10)
+
+        # self.bmap.plot(x, y, 'bo', markersize=1)
