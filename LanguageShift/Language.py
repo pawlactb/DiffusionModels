@@ -55,7 +55,7 @@ class LanguageAgent(Agent):
         '''
         f = np.zeros(len(self.probability))
         self.get_population()
-        for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:6]:
+        for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:8]:
             f += self.calculate_contribution(neighbor)
 
         self.next_probability = ((self.population * self.probability) + f) / (np.sum(f) + self.population)
@@ -150,11 +150,10 @@ class LanguageModel(Model):
         self.datacollector = DataCollector(
             model_reporters={},
             agent_reporters={"pop": lambda x: x.population,
-                             "p_slovene": lambda x: x.probability[0],
-                             "p_german": lambda x: x.probability[1],
+                             "p_german": lambda x: x.probability[0],
+                             "p_slovene": lambda x: x.probability[1],
                              "lat": lambda x: x.pos[0],
-                             "long": lambda x: x.pos[1],
-                             "prob": lambda x: x.probability[0] + x.probability[1]})
+                             "long": lambda x: x.pos[1]})
 
     def get_population(self, id, year):
         return self.agent_pop[id][year]
