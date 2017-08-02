@@ -11,7 +11,7 @@ class Visualization(object):
 
         # plot map with albert's equal area projection
         self.draw_map(res='c',
-                      proj='aea',
+                      proj='merc',
                       lat=46.64, lon=14.26,
                       lllong=12.5, lllat=46, urlong=15.1, urlat=47.15)
 
@@ -64,6 +64,6 @@ class Visualization(object):
         col = cmap.to_rgba(german.tolist(), norm=None)
 
         # x, y = self.bmap(longs, lats, c=col)
-        self.bmap.scatter(longs, lats, latlon=True, marker='s', s=1, c=german, cmap='coolwarm', zorder=10)
+        self.bmap.scatter(longs, lats, latlon=True, marker='s', s=5, c=german, cmap='coolwarm', zorder=10)
 
         # self.bmap.plot(x, y, 'bo', markersize=1)

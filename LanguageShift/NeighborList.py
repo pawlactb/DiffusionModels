@@ -93,6 +93,7 @@ class NeighborList(object):
                 #add the agent's id to the priority queue, with the distance as the priority
                 neighbors_pq.add_task(b_id, priority=self.get_distance(a, b))
             neighbors_pq.heapify()
+            #
             neighbors = [i[2] for i in neighbors_pq.get_smallest(self.neighborhood_size + 1)]
             # print('\t\tadding ' + str(neighbors))
             self.agent_neighbors.update({int(a_id): neighbors})

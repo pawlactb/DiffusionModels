@@ -41,10 +41,13 @@ class LanguageAgent(Agent):
         Returns: None
 
         '''
-        ret_val = ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
+        # this if statement turns the
+        if self.model.grid.get_distance(self, other) > np.sqrt(2):
+            ret_val = 0
+        else:
+            ret_val = ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
             -np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion)
         return ret_val
-        # return ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(-np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion)
 
     def step(self):
         '''
@@ -55,7 +58,7 @@ class LanguageAgent(Agent):
         '''
         f = np.zeros(len(self.probability))
         self.get_population()
-        for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:8]:
+        for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:9]:
             f += self.calculate_contribution(neighbor)
 
         self.next_probability = ((self.population * self.probability) + f) / (np.sum(f) + self.population)

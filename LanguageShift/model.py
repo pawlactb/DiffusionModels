@@ -7,6 +7,7 @@ m.datacollector.get_agent_vars_dataframe().to_csv('output.txt')
 
 v = Visualization(shapefile=[('./shapefiles/AUT_adm2', 'austria'), ('./shapefiles/SVN_adm0', 'slovenia'), ],
                   csv='output.txt')
-v.new_figure(title='Locations in our Study')
-v.plot_timestep(15)
+
+v.new_figure(title='t=14')
+v.plot_timestep(14)
 v.show()
