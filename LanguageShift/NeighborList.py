@@ -2,6 +2,9 @@ import heapq
 import itertools
 import pickle
 
+from math import radians, cos, sin, asin, sqrt
+
+
 class heap(object):
     def __init__(self):
         self.pq = []  # list of entries arranged in a heap
@@ -40,6 +43,34 @@ class heap(object):
         return heapq.nsmallest(n, self.pq)[:]
 
 
+# from https://stackoverflow.com/a/4913653/
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    r = 6371  # Radius of earth in kilometers. Use 3956 for miles
+    return c * r
+
+
+def get_distance(a, b):
+    '''
+    The get_distance function provides the notion of distance for our interactions.
+    Args:
+        a: the first point
+        b: the second point
+    Returns: (float) distance between two points in space.
+    '''
+    return haversine(a.pos[0], a.pos[1], b.pos[0], b.pos[1])
+
+
 
 class NeighborList(object):
     """ Grid where adjacency is stored, rather calculated. Used for fast neighbor lookups.
@@ -61,7 +92,7 @@ class NeighborList(object):
         get_neighbors: Returns the objects surrounding a given cell.
     """
 
-    def __init__(self, distance_fn, neighborhood_size, loadpickle=None):
+    def __init__(self, neighborhood_size, distance_fn=get_distance, loadpickle=None):
         self.agent_list = {}
         if loadpickle is not None:
             self.agent_neighbors = pickle.load(open(loadpickle, 'rb'))
