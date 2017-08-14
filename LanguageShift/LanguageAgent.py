@@ -3,7 +3,7 @@ from mesa import Agent
 
 
 class LanguageAgent(Agent):
-    def __init__(self, model, unique_id, initial_prob_v):
+    def __init__(self, model, name, unique_id, initial_prob_v):
         """
         A LanguageAgent represents a particular place during a language shift simulation.
         :param model: the model that the agent is in
@@ -11,8 +11,12 @@ class LanguageAgent(Agent):
         :param initial_prob_v: a list of probabilities of speaking particular languages
         """
         super().__init__(unique_id, model)
+        self.name = name
         self.probability = np.array(initial_prob_v)
         self.next_probability = np.array(self.probability, copy=True)
+
+        self.difference = np.zeros(len(self.probability))
+
         self.diffusion = self.model.diffusion
         self.get_population()
 
@@ -35,7 +39,21 @@ class LanguageAgent(Agent):
         #   print('zero ret_val!!!!' + str(self.unique_id) + ' ' + str(other.unique_id))
         # else:
         ret_val = ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
-            -np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion)
+            -np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion * self.model.timestep)
+        return ret_val
+
+    def prochazaka_contrib(self, other):
+        '''
+                Args:
+                    other: Another agent for which you want to find the impact from.
+                Returns: None
+        '''
+        if self.model.grid.get_distance(self, other) > np.sqrt(2):
+            ret_val = 0
+        # print('zero ret_val!!!!' + str(self.unique_id) + ' ' + str(other.unique_id))
+        else:
+            ret_val = ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
+                -np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion * self.model.timestep)
         return ret_val
 
     def step(self):
@@ -44,11 +62,16 @@ class LanguageAgent(Agent):
         Returns: None
         '''
         f = np.zeros(len(self.probability))
+        p = np.zeros(len(self.probability))
+
         self.get_population()
         for neighbor in self.model.grid.get_neighbors_by_agent(self)[1:self.model.grid.neighborhood_size + 1]:
             f += self.calculate_contribution(neighbor)
+            p += self.prochazaka_contrib(neighbor)
 
         self.next_probability = ((self.population * self.probability) + f) / (np.sum(f) + self.population)
+        self.difference = self.next_probability - ((self.population * self.probability) + p) / (
+        np.sum(p) + self.population)
 
     def advance(self):
         '''

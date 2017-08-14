@@ -1,4 +1,3 @@
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -60,10 +59,6 @@ class Visualization(object):
 
         german = self.data.loc[self.data['Step'] == timestep]['p_german']
         slovene = self.data.loc[self.data['Step'] == timestep]['p_slovene']
-        cmap = cm.ScalarMappable(cmap='coolwarm')
-        col = cmap.to_rgba(german.tolist(), norm=None)
+        german_error = self.data.loc[self.data['Step'] == timestep]['grid_diff_g']
 
-        # x, y = self.bmap(longs, lats, c=col)
-        self.bmap.scatter(longs, lats, latlon=True, marker='s', s=5, c=german, cmap='coolwarm', zorder=10)
-
-        # self.bmap.plot(x, y, 'bo', markersize=1)
+        self.bmap.scatter(longs, lats, latlon=True, marker='s', s=5, c=german_error, cmap='coolwarm', zorder=10)

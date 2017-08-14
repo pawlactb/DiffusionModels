@@ -9,7 +9,7 @@ from LanguageShift.NeighborList import NeighborList
 
 
 class LanguageModel(Model):
-    def __init__(self, diffusivity, filename, grid_pickle=None):
+    def __init__(self, diffusivity, timestep, filename, grid_pickle=None):
         '''
         LanguageModels contain LanguageAgents and other objects to run the model.
         Args:
@@ -24,6 +24,7 @@ class LanguageModel(Model):
         self.diffusion = np.array(diffusivity)
         self.pop_data = self.read_file(filename)
         self.agent_pop = {}
+        self.timestep = timestep
 
         # for loc in self.pop_data.loc[:]['location_id']:
         for row in self.pop_data.itertuples(index=True):
@@ -36,16 +37,16 @@ class LanguageModel(Model):
             self.num_agents += 1
             # Create agents, add them to scheduler
             if float(row[11]) == 0:
-                a = LanguageAgent(self, int(row[1]), [0, 1])
+                a = LanguageAgent(self, str(row[2]), int(row[1]), [0, 1])
             else:
-                a = LanguageAgent(self, int(row[1]), [float(row[5]), 1 - (float(row[5]))])
+                a = LanguageAgent(self, str(row[2]), int(row[1]), [float(row[5]), 1 - (float(row[5]))])
 
             self.schedule.add(a)
 
             # add the agent at position (x,y)
             # print('lat: ' + str(self.pop_data.loc[idx]['latitude']))
             # print('long ' + str(self.pop_data.loc[idx]['longitude']))
-            # print('id:' + str(a.unique_id))
+            print('id:' + str(a.unique_id))
             self.grid.add_agent((float(self.pop_data.loc[a.unique_id - 1]['latitude']),
                                  float(self.pop_data.loc[a.unique_id - 1]['longitude'])), a)
             # print('added')
@@ -56,6 +57,8 @@ class LanguageModel(Model):
         self.datacollector = DataCollector(
             model_reporters={},
             agent_reporters={"pop": lambda x: x.population,
+                             "grid_diff_g": lambda x: x.difference[0] * x.population,
+                             "grid_diff_s": lambda x: x.difference[1] * x.population,
                              "p_german": lambda x: x.probability[0],
                              "p_slovene": lambda x: x.probability[1],
                              "lat": lambda x: x.pos[0],
