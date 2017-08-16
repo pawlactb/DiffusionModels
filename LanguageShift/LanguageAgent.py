@@ -15,7 +15,9 @@ class LanguageAgent(Agent):
         self.probability = np.array(initial_prob_v)
         self.next_probability = np.array(self.probability, copy=True)
 
-        self.difference = np.zeros(len(self.probability))
+        self.p_probability = np.array(initial_prob_v)
+        self.p_next_probability = np.array(self.p_probability, copy=True)
+
 
         self.diffusion = self.model.diffusion
         self.get_population()
@@ -52,7 +54,7 @@ class LanguageAgent(Agent):
             ret_val = 0
         # print('zero ret_val!!!!' + str(self.unique_id) + ' ' + str(other.unique_id))
         else:
-            ret_val = ((other.population * other.probability) / (4 * np.pi * self.diffusion)) * np.exp(
+            ret_val = ((other.population * other.p_probability) / (4 * np.pi * self.diffusion)) * np.exp(
                 -np.square(self.model.grid.get_distance(self, other))) / (4 * self.diffusion * self.model.timestep)
         return ret_val
 
@@ -70,8 +72,7 @@ class LanguageAgent(Agent):
             p += self.prochazaka_contrib(neighbor)
 
         self.next_probability = ((self.population * self.probability) + f) / (np.sum(f) + self.population)
-        self.difference = self.next_probability - ((self.population * self.probability) + p) / (
-        np.sum(p) + self.population)
+        self.p_next_probability = ((self.population * self.p_probability) + p) / (np.sum(p) + self.population)
 
     def advance(self):
         '''
@@ -79,3 +80,4 @@ class LanguageAgent(Agent):
         Returns: None
         '''
         self.probability, self.next_probability = self.next_probability, self.probability
+        self.p_probability, self.p_next_probability = self.p_next_probability, self.p_probability

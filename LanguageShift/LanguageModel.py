@@ -20,6 +20,7 @@ class LanguageModel(Model):
         super().__init__()
         self.num_agents = 0
         self.grid = NeighborList(neighborhood_size=8, loadpickle=grid_pickle)
+
         self.schedule = SimultaneousActivation(self)
         self.diffusion = np.array(diffusivity)
         self.pop_data = self.read_file(filename)
@@ -51,16 +52,17 @@ class LanguageModel(Model):
                                  float(self.pop_data.loc[a.unique_id - 1]['longitude'])), a)
             # print('added')
 
-        if (grid_pickle is None):
+        if grid_pickle is None:
             self.grid.calc_neighbors()
 
         self.datacollector = DataCollector(
             model_reporters={},
             agent_reporters={"pop": lambda x: x.population,
-                             "grid_diff_g": lambda x: x.difference[0] * x.population,
-                             "grid_diff_s": lambda x: x.difference[1] * x.population,
+                             "p_p_german": lambda x: x.p_probability[0],
+                             "p_p_slovene": lambda x: x.p_probability[1],
                              "p_german": lambda x: x.probability[0],
                              "p_slovene": lambda x: x.probability[1],
+                             "p_diff": lambda x: np.sum(np.abs(x.probability - x.p_probability)),
                              "lat": lambda x: x.pos[0],
                              "long": lambda x: x.pos[1]})
 

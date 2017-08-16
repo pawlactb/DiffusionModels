@@ -57,8 +57,10 @@ class Visualization(object):
         longs = np.array(self.data.loc[self.data['Step'] == timestep]['long'])
         lats = np.array(self.data.loc[self.data['Step'] == timestep]['lat'])
 
-        german = self.data.loc[self.data['Step'] == timestep]['p_german']
-        slovene = self.data.loc[self.data['Step'] == timestep]['p_slovene']
-        german_error = self.data.loc[self.data['Step'] == timestep]['grid_diff_g']
+        german = np.array(self.data.loc[self.data['Step'] == timestep]['p_german'])
+        slovene = np.array(self.data.loc[self.data['Step'] == timestep]['p_slovene'])
+        p_german = np.array(self.data.loc[self.data['Step'] == timestep]['p_p_german'])
+        p_slovene = np.array(self.data.loc[self.data['Step'] == timestep]['p_p_slovene'])
+        p_diff = np.array(self.data.loc[self.data['Step'] == timestep]['p_diff'])
 
-        self.bmap.scatter(longs, lats, latlon=True, marker='s', s=5, c=german_error, cmap='coolwarm', zorder=10)
+        self.bmap.scatter(longs, lats, latlon=True, marker='s', s=5, c=p_diff, cmap='coolwarm', zorder=10)
